@@ -1,0 +1,10 @@
+/home/ubuntu/projects/Alfred/encrypt-sidecar/target/release/deps/wincode_derive-b4c0447ceae4b55e.d: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/lib.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/assert_zero_copy.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/common.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_read.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_write.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/uninit_builder.rs
+
+/home/ubuntu/projects/Alfred/encrypt-sidecar/target/release/deps/libwincode_derive-b4c0447ceae4b55e.so: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/lib.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/assert_zero_copy.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/common.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_read.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_write.rs /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/uninit_builder.rs
+
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/lib.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/assert_zero_copy.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/common.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_read.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/schema_write.rs:
+/home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wincode-derive-0.4.4/src/uninit_builder.rs:
