@@ -1,5 +1,5 @@
 import { Connection, Keypair, Transaction, sendAndConfirmTransaction, PublicKey } from '@solana/web3.js';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -12,6 +12,7 @@ const execAsync = promisify(exec);
 const MAGICBLOCK_PAYMENTS_API = 'https://payments.magicblock.app';
 const SOLANA_DEVNET_RPC = 'https://api.devnet.solana.com';
 const USDC_MINT_DEVNET = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
+const BOOK_PATH = process.env.HOME + '/.alfred-addressbook.json';
 
 const MAINNET_MINTS = {
     'SOL': 'So11111111111111111111111111111111111111112',
@@ -100,7 +101,6 @@ async function vaultDeposit(data) {
     const transaction = Transaction.from(Buffer.from(txData.transactionBase64, 'base64'));
     const signature = await sendAndConfirmTransaction(connection, transaction, [umbraWallet]);
     
-    // Update scanner baseline to prevent false notification
     lastKnownBalance = (Number(await fetch(`${MAGICBLOCK_PAYMENTS_API}/v1/spl/balance?address=${umbraWallet.publicKey.toBase58()}&mint=${USDC_MINT_DEVNET}&cluster=devnet`).then(r => r.json()).then(d => d.balance || 0)) / 1_000_000);
     
     const humanAmount = (Number(depositAmount) / 1_000_000).toFixed(2);
@@ -121,7 +121,6 @@ async function vaultWithdraw(data) {
     const withdrawTransaction = Transaction.from(Buffer.from(withdrawTx.transactionBase64, 'base64'));
     const signature = await sendAndConfirmTransaction(connection, withdrawTransaction, [umbraWallet]);
     
-    // Update scanner baseline
     lastKnownBalance = (Number(await fetch(`${MAGICBLOCK_PAYMENTS_API}/v1/spl/balance?address=${umbraWallet.publicKey.toBase58()}&mint=${USDC_MINT_DEVNET}&cluster=devnet`).then(r => r.json()).then(d => d.balance || 0)) / 1_000_000);
     
     return { success: true, message: `Withdrawn ${amount} USDC from vault, Sir.` };
@@ -133,17 +132,17 @@ async function vaultTransfer(data) {
     const connection = new Connection(SOLANA_DEVNET_RPC, 'confirmed');
     const transferAmount = Math.floor(parseFloat(amount) * 1_000_000);
 
-    // Check total available (L1 + Vault)
+    // Check total available
     const currentL1 = await fetch(`${MAGICBLOCK_PAYMENTS_API}/v1/spl/balance?address=${umbraWallet.publicKey.toBase58()}&mint=${USDC_MINT_DEVNET}&cluster=devnet`).then(r => r.json());
     const l1Balance = Number(currentL1.balance || 0);
     const vaultBalance = await getSecureBalance(umbraWallet);
     const totalAvailable = l1Balance + vaultBalance;
 
     if (totalAvailable < transferAmount) {
-        return { success: false, error: `Insufficient funds. Available: ${(totalAvailable / 1_000_000).toFixed(2)} USDC, Requested: ${amount} USDC.` };
+        return { success: false, error: `Insufficient funds. Available: ${(totalAvailable / 1_000_000).toFixed(2)} USDC.` };
     }
 
-    // Withdraw from vault if L1 is insufficient
+    // Withdraw from vault if needed
     if (l1Balance < transferAmount) {
         const needed = transferAmount - l1Balance;
         const withdrawTx = await callMagicBlockAPI('/v1/spl/withdraw', {
@@ -171,10 +170,22 @@ async function vaultTransfer(data) {
     const sendTransaction = Transaction.from(Buffer.from(sendTx.transactionBase64, 'base64'));
     const signature = await sendAndConfirmTransaction(connection, sendTransaction, [umbraWallet]);
     
-    // Update scanner baseline
     lastKnownBalance = (Number(await fetch(`${MAGICBLOCK_PAYMENTS_API}/v1/spl/balance?address=${umbraWallet.publicKey.toBase58()}&mint=${USDC_MINT_DEVNET}&cluster=devnet`).then(r => r.json()).then(d => d.balance || 0)) / 1_000_000);
-    
-    return { success: true, message: `Sent ${amount} USDC to ${destination.slice(0, 8)}..., Sir.` };
+
+    // Check if address is already saved
+    let book = {};
+    try { book = JSON.parse(readFileSync(BOOK_PATH, 'utf-8')); } catch {}
+    const alreadySaved = Object.entries(book).find(([name, addr]) => addr === destination);
+
+    if (alreadySaved) {
+        return { success: true, message: `Sent ${amount} USDC to ${alreadySaved[0]}, Sir.` };
+    }
+
+    return { 
+        success: true, 
+        destination,
+        message: `Sent ${amount} USDC. Shall I save this address to your book, Sir?` 
+    };
 }
 
 async function vaultSwap(params) {
@@ -187,7 +198,6 @@ async function vaultSwap(params) {
     const connection = new Connection(SOLANA_DEVNET_RPC, 'confirmed');
     
     try {
-        // 1. Withdraw
         const withdrawTx = await callMagicBlockAPI('/v1/spl/withdraw', {
             owner: umbraWallet.publicKey.toBase58(),
             amount: Math.floor(amountNum * 1_000_000),
@@ -197,7 +207,6 @@ async function vaultSwap(params) {
         const withdrawTransaction = Transaction.from(Buffer.from(withdrawTx.transactionBase64, 'base64'));
         await sendAndConfirmTransaction(connection, withdrawTransaction, [umbraWallet]);
         
-        // 2. Jupiter quote
         const fromMint = MAINNET_MINTS[fromTokenStr] || MAINNET_MINTS['USDC'];
         const toMint = MAINNET_MINTS[toTokenStr] || MAINNET_MINTS['SOL'];
         const quoteCmd = `jup spot quote --from ${fromMint} --to ${toMint} --amount ${amountNum} -f json`;
@@ -206,7 +215,6 @@ async function vaultSwap(params) {
         const outAmount = parseFloat(quote.outAmount);
         const rate = outAmount / parseFloat(quote.inAmount);
 
-        // 3. Re-shield
         await new Promise(resolve => setTimeout(resolve, 2500));
         await vaultDeposit({ amount: amountNum });
 
@@ -214,7 +222,7 @@ async function vaultSwap(params) {
             success: true,
             message: `Swap pipeline complete (simulated).\n` +
                      `Rate: 1 ${fromTokenStr} ≈ ${rate.toFixed(6)} ${toTokenStr}\n` +
-                     `Funds re-shielded to vault. Mainnet required for execution.`
+                     `Funds re-shielded to vault.`
         };
     } catch (error) {
         return { success: false, error: error.message };
@@ -227,7 +235,6 @@ let notificationChannel = null;
 export function setNotificationChannel(channel) { notificationChannel = channel; }
 
 export async function startAutoScanner() {
-    // Initialize baseline
     try {
         const umbraWallet = await getUmbraKeypair();
         const l1 = await fetch(`${MAGICBLOCK_PAYMENTS_API}/v1/spl/balance?address=${umbraWallet.publicKey.toBase58()}&mint=${USDC_MINT_DEVNET}&cluster=devnet`).then(r => r.json());

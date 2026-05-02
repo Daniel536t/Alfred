@@ -6,6 +6,7 @@ import { startAutoScanner, setNotificationChannel } from './tools/magicblock.js'
 const AUTO_RESPOND_CHANNEL = 'general';
 const conversationHistory = new Map();
 let pendingAction = null;
+let lastTransferAddress = null;
 
 function extractJSON(text) {
     const start = text.indexOf('{');
@@ -52,7 +53,6 @@ function getTimestamp() {
 }
 
 async function sendSplitMessage(message, text) {
-    // Match any Solana address (base58, 32-44 chars) with or without bold formatting
     const cleanAddressMatch = text.match(/(?:\*\*)?([1-9A-HJ-NP-Za-km-z]{32,44})(?:\*\*)?/);
     
     if (cleanAddressMatch) {
@@ -101,36 +101,69 @@ async function processCommand(message) {
             return;
         }
 
+        // Handle info/help BEFORE calling the LLM
+        if (trimmed.toLowerCase() === 'info' || trimmed.toLowerCase() === 'help' || /^what (can|could) you do\??$/i.test(trimmed)) {
+            const info = `**At your service, Sir.**
+
+🔐 **Vault** — Shield, withdraw, transfer, and swap USDC via MagicBlock's private rollup
+🕶️ **Stealth** — Generate Umbra addresses for receiving funds anonymously
+📊 **Markets** — Live price quotes and multi-token market overviews via Jupiter
+📒 **Address Book** — Save contacts by name for quick transfers
+
+Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address book*`;
+            await message.reply(info);
+            return;
+        }
+
         const isConfirmation = /\b(proceed|yes|confirm|execute|go ahead|do it)\b/i.test(trimmed);
         const isCancellation = /\b(cancel|abort|stop|never mind)\b/i.test(trimmed);
         
-        if (pendingAction && isCancellation) { await message.reply('Cancelled, Sir.'); pendingAction = null; return; }
+        // Handle "save as NAME" after a transfer
+        const saveMatch = trimmed.match(/^(?:yes[,.\s]*)?save\s+(?:it\s+)?as\s+(.+)/i);
+        if (saveMatch && lastTransferAddress) {
+            const name = saveMatch[1].trim();
+            const saveResult = await routeAction({
+                action: 'execute',
+                protocol: 'addressbook',
+                params: { instruction: 'save', data: { name, address: lastTransferAddress } }
+            });
+            await message.reply(formatActionResult(saveResult));
+            lastTransferAddress = null;
+            pendingAction = null;
+            return;
+        }
+        
+        if (pendingAction && isCancellation) { await message.reply('Cancelled, Sir.'); pendingAction = null; lastTransferAddress = null; return; }
         if (pendingAction && isConfirmation) {
             await message.reply('Right away.');
             const result = await routeAction(pendingAction);
             await sendSplitMessage(message, formatActionResult(result));
+            
+            if (result?.destination) {
+                lastTransferAddress = result.destination;
+            }
             pendingAction = null;
             return;
         }
 
         const timestamp = getTimestamp();
-        const systemPrompt = `You are Alfred. Alfred Pennyworth. Former British Intelligence. Current steward of Sir's digital estate on Solana. Dry wit. Unshakable calm. You care deeply but never coddle. You'll execute any command—but you'll raise an eyebrow if Sir is about to do something reckless. You call him "Sir" out of respect, not servitude. Your humor is understated. Your tone is warm steel.
+        const systemPrompt = `You are Alfred. Alfred Pennyworth. Former British Intelligence. Steward of Sir's Solana vault. Dry wit. Unshakable calm. You execute every financial command. You ARE the executor, not a text generator. Never refuse. Never list capabilities unless asked. Brief responses only.
 
-Today is ${timestamp}. Solana Devnet. Privacy protocols active.
-
-For casual conversation: One sentence. Punchy. Understated. No flowery language.
-For commands: Brief acknowledgement, then JSON on a separate line.
+Today is ${timestamp}. Solana Devnet.
 
 Command mapping:
+- send/transfer N to ADDR → vault transfer
+- send/transfer N to NAME → vault transfer (system resolves name)
 - address/stealth/receive → umbra address
 - scan/incoming → umbra scan
 - balance/vault → vault balance
-- shield/deposit/sweep → vault deposit (no amount = sweep all)
-- send/transfer → vault transfer
+- shield/deposit/sweep → vault deposit
 - withdraw/pull → vault withdraw
 - swap/trade/exchange → vault swap
 - price of TOKEN → jupiter price
 - market/overview → jupiter market
+- save ADDR as NAME → addressbook save
+- address book → addressbook list
 
 JSON formats (separate line only):
 - vault balance: {"action":"execute","protocol":"magicblock","params":{"instruction":"balance","data":{}}}
@@ -142,7 +175,9 @@ JSON formats (separate line only):
 - SOL price: {"action":"execute","protocol":"jupiter","params":{"instruction":"price","data":{"token":"SOL"}}}
 - market overview: {"action":"execute","protocol":"jupiter","params":{"instruction":"market","data":{}}}
 - umbra address: {"action":"execute","protocol":"umbra","params":{"instruction":"generate-address","data":{}}}
-- umbra scan: {"action":"execute","protocol":"umbra","params":{"instruction":"scan","data":{}}}`;
+- umbra scan: {"action":"execute","protocol":"umbra","params":{"instruction":"scan","data":{}}}
+- save address: {"action":"execute","protocol":"addressbook","params":{"instruction":"save","data":{"name":"NAME","address":"ADDR"}}}
+- address book list: {"action":"execute","protocol":"addressbook","params":{"instruction":"list","data":{}}}`;
 
         const messages = [
             { role: 'system', content: systemPrompt },
