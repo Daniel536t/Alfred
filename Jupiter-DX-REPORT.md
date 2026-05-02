@@ -2,7 +2,7 @@
 
 **Project:** AlfredOS — Ambient Financial Hypervisor on Solana  
 **Integration:** Jupiter CLI + Price API via AI agent (Node.js)  
-**Author:** Daniel Bright  
+**Author:** Daniel Brighten
 **Contact:** danielbrighten9@gmail.com  
 **GitHub:** https://github.com/Daniel536t/Alfred
 
@@ -74,7 +74,10 @@ We lost significant time debugging "Insufficient funds" errors before realizing 
 
 We passed `--amount 10000000` thinking it was 0.1 SOL in lamports. Jupiter interpreted it as 10,000,000 SOL. The quote returned ~$891M. No error. No warning. Just an absurd number.
 
-The CLI expects human-readable amounts (0.01), not raw lamports. This makes sense once you know it, but the documentation should explicitly call this out. For AI agents that might generate amounts programmatically, this is a silent data corruption risk.
+The CLI expects human-readable amounts (0.01), not raw lamports. This makes sense once you know it, but the documentation should explicitly call this out. For AI agents that might generate amounts programmatically, this could be a silent data corruption risk.
+
+We don't know if this would have actually gone through on mainnet, we never tried. But the fact that the quote returned at all, without flagging the amount as unusual, feels like a footgun waiting for someone more tired than us. The docs should call this out explicitly.
+
 
 ### Slippage Flag
 
@@ -111,7 +114,11 @@ Direct REST API calls to `quote-api.jup.ag` failed intermittently with DNS resol
 | REST API unreachable | CLI continued working |
 | DNS errors on quote endpoint | CLI handled routing internally |
 
-The CLI became our reliable fallback. This pattern—CLI as agent bridge—is actually a killer feature that Jupiter should market more aggressively.
+### CLI as Fallback
+
+When direct REST API calls to Jupiter failed with DNS errors, the CLI kept working. We didn't plan this—we just noticed that while our `fetch()` requests were timing out, `jup spot quote` returned instantly.
+
+This turned out to be valuable. The CLI handles routing internally, so it doesn't depend on our server's network reaching Jupiter's API directly. For anyone building agents on unreliable connections, the CLI is the safer integration path.
 
 **Recommendation:** A status page or health check endpoint for API availability would help developers distinguish between their bugs and network issues.
 
@@ -119,7 +126,7 @@ The CLI became our reliable fallback. This pattern—CLI as agent bridge—is ac
 
 ## The AI Agent Experience
 
-Using `child_process.exec` to call the Jupiter CLI from Node.js is elegant. Jupiter built an AI-native tool without realizing it.
+Using `child_process.exec` to call the Jupiter CLI from Node.js is elegant. I think Jupiter built an AI-native tool without realizing it.
 
 ### What Worked Brilliantly
 
@@ -155,4 +162,4 @@ Jupiter built an agent-native tool without marketing it that way. Lean into it. 
 
 ---
 
-*This report was written based on a real integration of Jupiter into AlfredOS, an ambient AI financial hypervisor on Solana, during the Colosseum Frontier Hackathon.*
+*This report was written based on the integration of Jupiter into AlfredOS, an ambient AI financial hypervisor on Solana, during the Colosseum Frontier Hackathon.*
