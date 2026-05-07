@@ -101,7 +101,77 @@ Document that `fromBalance: 'ephemeral'` may not work reliably on devnet. Provid
 
 ---
 
-## 6. What Worked Brilliantly
+## 6. Incoming Transaction Scanner
+
+We built an auto-scanner that monitors the Umbra L1 balance every 30 seconds and sends Discord notifications when funds arrive. This wasn't part of the MagicBlock API—we built it as a polling loop on top of the public balance endpoint.
+
+### What We Learned
+
+- The public balance endpoint (`/v1/spl/balance`) is fast and reliable for polling
+- A 30-second interval is sufficient for background monitoring
+- The scanner resets its baseline after every deposit, withdrawal, and transfer to avoid false notifications from our own operations
+
+### Recommendation
+
+A webhook or event-driven notification system for incoming deposits would eliminate the need for polling entirely. Developers shouldn't have to build their own scanners on top of a REST API.
+
+---
+
+## 7. Token Account Creation for New Addresses
+
+When sending USDC to a fresh Solana address that has never held USDC before, the transfer fails unless a token account exists for that mint. We built an `ensureTokenAccount` function that checks for the token account first and creates one if needed.
+
+### How It Works
+
+1. Before any transfer, Alfred calls `getAssociatedTokenAddress` to find the recipient's USDC token account
+2. If the account doesn't exist, Alfred creates it using `createAssociatedTokenAccountInstruction`
+3. The sender pays the rent fee (~0.002 SOL) to create the account
+4. Alfred notifies the user: "This address is new to me. I have created a token account for it."
+
+### What We Learned
+
+- Token account creation must happen as a **separate confirmed transaction** before the transfer
+- If the creation and transfer are bundled into a single API call, the simulation checks against stale state and fails
+- A 1-second delay after account creation ensures the network has confirmed the new account before the transfer begins
+
+### Recommendation
+
+Document the token account creation pattern clearly. New Solana developers may not know that addresses can't receive SPL tokens until a token account exists. AlfredOS handles this automatically, but the MagicBlock API itself doesn't abstract this away.
+
+---
+
+## 8. The Transfer Fix: Standalone Withdrawal Pattern
+
+The most persistent issue we faced was transfers failing when the L1 balance was insufficient and funds needed to come from the vault. The `/v1/spl/transfer` endpoint with `fromBalance: 'ephemeral'` should handle this, but it didn't work reliably on devnet.
+
+### The Problem
+
+The simulation checked the base layer state, not the ephemeral rollup state. Even though the vault had sufficient funds, the simulation saw zero balance on L1 and threw `insufficient funds`.
+
+### The Solution
+
+We wrote a dedicated `withdrawFromVault` function that performs the withdrawal as a completely separate transaction before the transfer:
+
+1. Check L1 balance
+2. If insufficient, call `/v1/spl/withdraw` as a standalone API call
+3. Sign and confirm the withdrawal transaction
+4. Wait 2 seconds for network confirmation
+5. Update the scanner baseline to prevent false "incoming" notifications
+6. Now call `/v1/spl/transfer` with `fromBalance: 'base'` using the newly funded L1
+
+This two-step pattern adds about 3 seconds to transfers but makes them reliable. The withdrawal and transfer are separate API calls with separate transaction confirmations.
+
+### Why This Matters
+
+This was the difference between our demo working and failing. Without this fix, every transfer that required vault funds would fail simulation. The fix is in our production code at `src/tools/magicblock.js` in the `vaultTransfer` function.
+
+### Recommendation
+
+If `fromBalance: 'ephemeral'` doesn't work reliably on devnet, provide a documented two-step pattern as a known workaround. Even better: fix the simulation to check ephemeral state during pre-flight.
+
+---
+
+## 9. What Worked Brilliantly
 
 - **Deposit Reliability:** Once configured correctly, deposits executed consistently. Four confirmed on-chain transactions. Zero failures after the initial setup.
 - **Withdrawal Speed:** Withdrawals from the vault to L1 confirmed quickly. The funds were available for transfer within seconds.
@@ -110,7 +180,7 @@ Document that `fromBalance: 'ephemeral'` may not work reliably on devnet. Provid
 
 ---
 
-## 7. Feature Requests
+## 10. Feature Requests
 
 1. **Document the authorization flow** for `/v1/spl/private-balance` with a code snippet
 2. **Add native SOL support** or clearly document that it's SPL-only
@@ -118,10 +188,12 @@ Document that `fromBalance: 'ephemeral'` may not work reliably on devnet. Provid
 4. **Add a "Which API?" guide** to the top of the docs to help developers choose between Private Payments and Ephemeral Rollups
 5. **Document the deposit flags** (`initIfMissing`, `initAtasIfMissing`, `idempotent`) in the deposit example
 6. **Document the `fromBalance: 'ephemeral'` limitation** on devnet and provide the two-step withdrawal-then-transfer workaround
+7. **Add webhook or event-driven notifications** for incoming deposits to eliminate the need for polling
+8. **Document token account creation pattern** for sending to fresh addresses
 
 ---
 
-## 8. What We Loved
+## 11. What We Loved
 
 The Private Payments API is the right abstraction for what we built. We didn't need to understand Ephemeral Rollups or TEE architecture. We just called REST endpoints with our wallet address and amounts, and MagicBlock handled the rest. The shielded vault is invisible to Solscan. The deposit transactions are confirmed on-chain. The privacy proof is verifiable by anyone who checks the block explorer and sees nothing.
 

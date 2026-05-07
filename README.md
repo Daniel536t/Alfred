@@ -372,24 +372,55 @@ We tested with Qwen. If you swap models, expect to recalibrate the system prompt
 
 Commands
 
+Alfred understands natural language. Here's how you'd actually talk to him.
+
+Checking Your Finances
+
 What You Say What Alfred Does
-vault balance Shows your shielded vault and incoming stealth balances
-shield 50 USDC Moves 50 USDC from L1 into the shielded vault
-shield Sweeps ALL USDC from L1 into the vault
-withdraw 20 USDC Pulls 20 USDC from the vault to L1
-send 50 USDC to Daniel Transfers 50 USDC to a saved contact
-send 50 USDC to 7JVd... Transfers 50 USDC to any Solana address
-vault swap 10 USDC to SOL Simulates a swap with live Jupiter pricing
-market overview Shows live prices for 9 tokens
-SOL price Shows live SOL/USDC price
-generate address Returns your Umbra stealth address
-scan for payments Checks for incoming funds at your Umbra address
-save 7JVd... as Daniel Saves an address to your address book
-save as Daniel Saves the last transfer address as Daniel
+vault balance Shows your shielded vault balance and any incoming funds waiting on your stealth address
+SOL price Fetches the live SOL/USDC price from Jupiter
+market overview Shows live prices for 9 tokens: SOL, JUP, BONK, JTO, WIF, RNDR, HNT, PYTH, USDC
+
+Receiving Money Privately
+
+What You Say What Alfred Does
+generate address Returns your Umbra stealth address. Give this to anyone who wants to send you money privately.
+scan for payments Checks your Umbra address for incoming funds. If someone sent you USDC, Alfred finds it.
+
+Managing Your Vault
+
+What You Say What Alfred Does
+shield 50 USDC Moves 50 USDC from your stealth address into the shielded vault. The public can no longer see it.
+shield Sweeps ALL available USDC from your stealth address into the vault.
+withdraw 20 USDC Pulls 20 USDC from the vault back to your stealth address.
+
+Sending Money to Anyone
+
+What You Say What Alfred Does
+send 50 USDC to 7JVdFkPm... Transfers 50 USDC to any Solana address. If the address has never held USDC before, Alfred creates a token account for them first and lets you know.
+send 50 USDC to Daniel Transfers 50 USDC to a contact you've saved. No need to copy-paste addresses again.
+
+Your Personal Address Book
+
+You don't need to memorize or copy-paste long Solana addresses. Alfred remembers your contacts.
+
+What You Say What Alfred Does
+save 7JVdFkPm... as Daniel Saves that address under the name "Daniel"
+save as Daniel After a transfer, Alfred asks if you want to save the address. Reply with this to save it immediately.
+send 20 USDC to Daniel Looks up "Daniel" in your address book and sends to the saved address
+address book Lists everyone you've saved
 delete Daniel Removes Daniel from your address book
-address book Lists all saved contacts
+
+Trading
+
+What You Say What Alfred Does
+vault swap 10 USDC to SOL Withdraws 10 USDC from the vault, gets a live Jupiter quote, shows the expected SOL output, and re-shields everything. On mainnet, the swap executes. On devnet, it's simulated with real pricing.
+
+Housekeeping
+
+What You Say What Alfred Does
 info Lists all available commands
-nuke Clears all channel messages
+nuke Clears all messages in the channel
 
 ---
 
@@ -399,7 +430,7 @@ Built With
 · Solana Web3.js — Blockchain interaction
 · Discord.js — Conversational interface
 · NVIDIA NIM — AI model (Qwen 3.5 122B) — swappable to any OpenAI-compatible API
-· MagicBlock Private Payments API — Shielded vault via TEE 
+· MagicBlock Private Payments API — Shielded vault via TEE
 · Umbra SDK — Stealth addresses for private receiving
 · Jupiter CLI — Market data and swap simulation
 
