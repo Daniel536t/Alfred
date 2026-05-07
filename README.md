@@ -8,10 +8,34 @@ AlfredOS is an ambient financial hypervisor for Discord. It turns natural langua
 
 ---
 
+## What AlfredOS Is Not
+
+- **Not a wallet** — You never paste a seed phrase into a chat. No browser extensions. No new accounts.
+- **Not a Discord integration** — Discord doesn't have to approve anything. They don't host it. They don't touch the money. Alfred is just a bot in a server, like any other.
+- **Not a platform dependency** — This pattern works on Slack, Telegram, or any chat platform where communities already gather. Discord is where Web3 lives today. Tomorrow it could be anywhere.
+
+---
+
+## What AlfredOS Gives Users
+
+- **Privacy by default** — Your balances are shielded. Your transfers are unlinkable. No public explorer shows your activity.
+- **Verbal confirmation for every action** — Alfred proposes. You dispose. Nothing moves without your explicit "proceed."
+- **No technical knowledge required** — You don't need to understand wallets, addresses, or networks. You just say what you want.
+- **Works with your existing wallet** — Export your private key once. Alfred handles the rest. Your keys never leave your machine.
+
+---
+
+## What AlfredOS Gives Communities
+
+Entire DAOs, trading groups, and developer guilds can route payments, execute swaps, and manage treasuries privately—directly inside the chat platforms they already use. No new app to install. No new workflow to learn. Just conversation.
+
+---
+
 ## TL;DR (for builders)
 
-- Chat-native interface for on-chain actions (Discord bot)
+- Chat-native interface for on-chain actions
 - Non-custodial: keys never leave the user's machine
+- Platform-agnostic: Discord today, Slack and Telegram tomorrow
 - Privacy layer:
   - Umbra → stealth addresses (identity privacy)
   - MagicBlock → TEE vault (balance + execution privacy)
@@ -20,13 +44,14 @@ AlfredOS is an ambient financial hypervisor for Discord. It turns natural langua
   - Jupiter → pricing + routing
 - Safety:
   - Explicit "proceed" confirmation required for all transactions
+- AI provider: tested with NVIDIA Qwen 3.5 122B. Swappable to any OpenAI-compatible API.
 
 ---
 
 ## Try It (Devnet Demo)
 
 1. Set up the bot (see Setup below)
-2. Fund a devnet wallet
+2. Fund a devnet wallet (see Step 3)
 3. In Discord, type:
    - `vault balance`
    - `generate address`
@@ -44,7 +69,7 @@ Observe:
 - **Non-custodial by default** — users retain full control of keys
 - **Privacy as a baseline** — not an add-on feature
 - **Intent over interfaces** — users say what they want, not how to execute it
-- **Composable architecture** — each layer can evolve independently
+- **Platform-agnostic architecture** — each layer can run on any chat platform
 
 ---
 
@@ -67,6 +92,10 @@ The vast majority of Web3 coordination—DAOs, trading groups, developer guilds,
 That leaves millions of users forced to leave the platform just to execute a simple transfer, exposing their entire financial history on public block explorers every time they do.
 
 AlfredOS fills the gap Discord cannot address. It is not a wallet. You never paste a seed phrase into a chat. No browser extensions. No new accounts. No platform risk for Discord. Instead, Alfred acts as a secure, non-custodial routing engine directly inside your existing Discord server. He cannot touch your funds. He only orchestrates them with your explicit permission.
+
+Discord doesn't have to do anything. They don't build a wallet. They don't approve an integration. They don't touch the money. Alfred is just a bot in a server—like any other bot. Users get private financial infrastructure without Discord having to move a muscle.
+
+And this pattern doesn't stop at Discord. It works on Slack. It works on Telegram. It works on any platform where communities already gather. Web3's coordination layer can finally become its payment layer—without waiting for platform permission.
 
 The biggest fintech companies of the last decade won by embedding payments where users already spent their time: Venmo in text messaging, Cash App in Twitter, WeChat Pay in China's chat infrastructure. Web3's chat app is Discord. AlfredOS is the payment layer Discord never built—and now cannot build.
 
@@ -91,6 +120,7 @@ Every demo shown here runs on **Solana devnet**, using devnet patterns that simu
 | **Base** | Solana | Low-latency execution, native SPL token composability |
 | **Storage** | MagicBlock Private Payments API | Shields USDC balances inside a TEE-protected vault. No corresponding public balance is visible on standard explorers (e.g., Solscan). |
 | **Identity** | Umbra SDK | Generates signature-derived stealth addresses. Senders see a one-time address, not your wallet. |
+| **Contacts** | Address Book | Saves recipient addresses by name. Resolves names to addresses for quick sending. Auto-prompts to save after each transfer. Supports save, delete, and list operations. |
 | **Intelligence** | Jupiter CLI | Live price feeds and swap simulation via natural language commands. |
 | **Interface** | Discord bot (Node.js) | Conversation-driven. Alfred confirms before any funds move. |
 
@@ -118,6 +148,19 @@ AlfredOS uses Umbra's deterministic key derivation to generate stealth addresses
 When someone sends USDC to that address, only your viewing key can detect it. The sender never sees your main wallet. The blockchain records the transaction, but not the relationship between sender and receiver.
 
 The Umbra devnet program ID used: `DSuKkyqGVGgo4QtPABfxKJKygUDACbUhirnuv63mEpAJ`
+
+### Address Book Integration
+
+AlfredOS includes a persistent address book that stores recipient addresses by name. The address book:
+
+- **Saves contacts** — After any transfer to a new address, Alfred asks "Shall I save this address to your book, Sir?" The user can reply "Yes, save as Bruce" to store the address.
+- **Resolves names** — When the user says "send 10 USDC to Bruce," the router looks up "Bruce" in the address book and replaces it with the actual Solana address before calling MagicBlock.
+- **Validates addresses** — Names are cleaned of accidental punctuation (periods, commas) before saving. Solana addresses are validated to ensure they're real public keys.
+- **Supports deletion** — Users can say "delete Bruce" or "remove Bruce" to remove a contact.
+- **Persists across restarts** — The address book is stored as a JSON file on the server (`~/.alfred-addressbook.json`).
+- **Shows address previews** — When listing contacts, addresses are truncated for privacy (e.g., `7JVdFkPm...`).
+
+The address book eliminates the need to copy-paste long Solana addresses for repeat recipients. It's the social layer that makes Alfred feel like a personal assistant, not a command-line tool.
 
 ### MagicBlock Integration
 
@@ -171,6 +214,7 @@ In a real deployment, we would add formal security audits, mobile support, and c
 - **Solana professionals** — Founders, developers, and contractors who want to receive salary without their neighbors knowing exactly how much SOL they hold
 - **DAO treasurers** — Managers who need to move capital or execute governance-approved swaps without being front-run by MEV bots
 - **Privacy-conscious users** — Anyone who believes their financial activity shouldn't be a permanent, searchable public record
+- **Literally anyone** — There's no technical tutorial required. You talk. Alfred executes. That's it.
 
 ---
 
@@ -200,7 +244,7 @@ In a real deployment, we would add formal security audits, mobile support, and c
 - **Solana CLI** installed and configured for devnet
 - **A funded Solana wallet** (devnet SOL for testing)
 - **A Discord server** where you have admin permissions
-- **NVIDIA API key** (free tier works)
+- **An API key** from NVIDIA, Grok, Gemini, or any OpenAI-compatible AI provider
 - **Jupiter API key** (free from developers.jup.ag)
 
 ### Step 1: Clone and Install
@@ -211,7 +255,37 @@ cd Alfred
 npm install
 ```
 
-Step 2: Install Jupiter CLI
+Step 2: Create Your Dev Wallet
+
+Alfred needs a Solana wallet to sign transactions. Create a fresh one for devnet testing:
+
+```bash
+solana-keygen new -o ~/dev-wallet.json
+```
+
+This generates a new keypair file. You'll see a public key printed—that's your wallet address. The private key stays in the file on your server.
+
+Already have a wallet? You can use any Solana wallet. Export your private key from Phantom or Solflare and save it to the same path. Alfred just needs the keypair file.
+
+Step 3: Fund Your Wallet
+
+You need both SOL (for transaction fees) and USDC (for transfers).
+
+Devnet SOL:
+
+```bash
+solana airdrop 2 --url devnet
+```
+
+If the airdrop fails (rate-limited), try a community faucet or ask in the Solana devnet Discord.
+
+Devnet USDC:
+
+Visit a Solana devnet faucet that supports the mint Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr and request test USDC to your wallet address.
+
+Which faucet? We used spl-token-faucet.com during development. It provides both devnet SOL and USDC. Any community faucet that supports custom SPL mint addresses will work.
+
+Step 4: Install Jupiter CLI
 
 ```bash
 npm i -g @jup-ag/cli
@@ -221,7 +295,7 @@ jup keys add alfred --file ~/path-to-your-keypair.json
 jup keys use alfred
 ```
 
-Step 3: Set Up Environment
+Step 5: Set Up Environment
 
 ```bash
 cp .env.example .env
@@ -231,11 +305,13 @@ Edit .env with your actual values:
 
 ```env
 DISCORD_BOT_TOKEN=your_discord_bot_token
-NVIDIA_API_KEY=your_nvidia_api_key
+NVIDIA_API_KEY=your_api_key
 SOLANA_KEYPAIR_PATH=/home/ubuntu/dev-wallet.json
 ```
 
-Step 4: Create a Discord Bot
+The variable name NVIDIA_API_KEY doesn't matter. It's just a string that gets passed to your AI provider. If you're using Grok, Gemini, or any other OpenAI-compatible API, put your key here and update the base URL in Step 9.
+
+Step 6: Create a Discord Bot
 
 1. Go to Discord Developer Portal
 2. Click New Application → name it "AlfredOS"
@@ -246,25 +322,11 @@ Step 4: Create a Discord Bot
 7. Go back to Bot → Reset Token → copy the token
 8. Add it to your .env file as DISCORD_BOT_TOKEN
 
-Step 5: Get an NVIDIA API Key
-
-1. Go to build.nvidia.com
-2. Sign up or log in, navigate to API Keys, generate a new key
-3. Add it to your .env file as NVIDIA_API_KEY
-
-Step 6: Get a Jupiter API Key
+Step 7: Get a Jupiter API Key
 
 1. Go to developers.jup.ag
 2. Sign up and create a new API key
-3. Use it in Step 2 when configuring the Jupiter CLI
-
-Step 7: Fund Your Wallet
-
-```bash
-solana airdrop 2 --url devnet
-```
-
-For devnet USDC, visit a Solana faucet that supports the mint Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr and request test USDC.
+3. Use it in Step 4 when configuring the Jupiter CLI
 
 Step 8: Start Alfred
 
@@ -273,6 +335,38 @@ npm start
 ```
 
 Alfred will appear online in your Discord server's #general channel. Type info to see what he can do.
+
+Step 9: Using a Different AI Model
+
+Alfred was built and tested with Qwen 3.5 122B on NVIDIA's API. The system prompt, token limits, and response parsing are calibrated for this model.
+
+You can swap to any OpenAI-compatible API provider. In src/discord.js, change these two lines:
+
+```javascript
+// NVIDIA Qwen (tested)
+const BASE_URL = 'https://integrate.api.nvidia.com/v1';
+const MODEL = 'qwen/qwen3.5-122b-a10b';
+
+// Grok (example — not tested)
+const BASE_URL = 'https://api.x.ai/v1';
+const MODEL = 'grok-3-beta';
+
+// Gemini (example — not tested)
+const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const MODEL = 'gemini-2.0-flash';
+```
+
+Your API key stays in the .env file. The variable name doesn't matter—it's just a string that gets passed to the provider.
+
+⚠️ What to Expect When Swapping Models
+
+Issue Likelihood What Happens
+Verbose responses High Brief Alfred becomes chatty Alfred
+Refused commands Medium Safety filters block financial operations
+Broken JSON Medium Commands fail silently
+Different personality Certain Alfred won't sound like Alfred
+
+We tested with Qwen. If you swap models, expect to recalibrate the system prompt, token limits, and temperature settings. The architecture is model-agnostic. The personality is not.
 
 ---
 
@@ -291,6 +385,8 @@ SOL price Shows live SOL/USDC price
 generate address Returns your Umbra stealth address
 scan for payments Checks for incoming funds at your Umbra address
 save 7JVd... as Daniel Saves an address to your address book
+save as Daniel Saves the last transfer address as Daniel
+delete Daniel Removes Daniel from your address book
 address book Lists all saved contacts
 info Lists all available commands
 nuke Clears all channel messages
@@ -302,8 +398,8 @@ Built With
 · Solana — Low-latency execution and native SPL token composability
 · Solana Web3.js — Blockchain interaction
 · Discord.js — Conversational interface
-· NVIDIA NIM — AI model (Qwen 3.5 122B)
-· MagicBlock Private Payments API — Shielded vault via TEE
+· NVIDIA NIM — AI model (Qwen 3.5 122B) — swappable to any OpenAI-compatible API
+· MagicBlock Private Payments API — Shielded vault via TEE 
 · Umbra SDK — Stealth addresses for private receiving
 · Jupiter CLI — Market data and swap simulation
 
