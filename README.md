@@ -124,6 +124,8 @@ Every demo shown here runs on **Solana devnet**, using devnet patterns that simu
 | **Intelligence** | Jupiter CLI | Live price feeds and swap simulation via natural language commands. |
 | **Interface** | Discord bot (Node.js) | Conversation-driven. Alfred confirms before any funds move. |
 
+---
+
 ### Privacy Architecture
 
 When you tell Alfred to shield funds:
@@ -255,7 +257,7 @@ cd Alfred
 npm install
 ```
 
-Step 2: Create Your Dev Wallet
+### Step 2: Create Your Dev Wallet
 
 Alfred needs a Solana wallet to sign transactions. Create a fresh one for devnet testing:
 
@@ -265,13 +267,13 @@ solana-keygen new -o ~/dev-wallet.json
 
 This generates a new keypair file. You'll see a public key printed—that's your wallet address. The private key stays in the file on your server.
 
-Already have a wallet? You can use any Solana wallet. Export your private key from Phantom or Solflare and save it to the same path. Alfred just needs the keypair file.
+> **Already have a wallet?** You can use any Solana wallet. Export your private key from Phantom or Solflare and save it to the same path. Alfred just needs the keypair file.
 
-Step 3: Fund Your Wallet
+### Step 3: Fund Your Wallet
 
 You need both SOL (for transaction fees) and USDC (for transfers).
 
-Devnet SOL:
+**Devnet SOL:**
 
 ```bash
 solana airdrop 2 --url devnet
@@ -279,13 +281,13 @@ solana airdrop 2 --url devnet
 
 If the airdrop fails (rate-limited), try a community faucet or ask in the Solana devnet Discord.
 
-Devnet USDC:
+**Devnet USDC:**
 
-Visit a Solana devnet faucet that supports the mint Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr and request test USDC to your wallet address.
+Visit a Solana devnet faucet that supports the mint `Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr` and request test USDC to your wallet address.
 
-Which faucet? We used spl-token-faucet.com during development. It provides both devnet SOL and USDC. Any community faucet that supports custom SPL mint addresses will work.
+> **Which faucet?** We used **spl-token-faucet.com** during development. It provides both devnet SOL and USDC. Any community faucet that supports custom SPL mint addresses will work.
 
-Step 4: Install Jupiter CLI
+### Step 4: Install Jupiter CLI
 
 ```bash
 npm i -g @jup-ag/cli
@@ -295,13 +297,13 @@ jup keys add alfred --file ~/path-to-your-keypair.json
 jup keys use alfred
 ```
 
-Step 5: Set Up Environment
+### Step 5: Set Up Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit .env with your actual values:
+Edit `.env` with your actual values:
 
 ```env
 DISCORD_BOT_TOKEN=your_discord_bot_token
@@ -309,38 +311,38 @@ NVIDIA_API_KEY=your_api_key
 SOLANA_KEYPAIR_PATH=/home/ubuntu/dev-wallet.json
 ```
 
-The variable name NVIDIA_API_KEY doesn't matter. It's just a string that gets passed to your AI provider. If you're using Grok, Gemini, or any other OpenAI-compatible API, put your key here and update the base URL in Step 9.
+> **The variable name `NVIDIA_API_KEY` doesn't matter.** It's just a string that gets passed to your AI provider. If you're using Grok, Gemini, or any other OpenAI-compatible API, put your key here and update the base URL in Step 9.
 
-Step 6: Create a Discord Bot
+### Step 6: Create a Discord Bot
 
-1. Go to Discord Developer Portal
+1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Click New Application → name it "AlfredOS"
 3. Go to Bot → Add Bot
 4. Under Privileged Gateway Intents, enable: Message Content Intent, Server Members Intent, Presence Intent
 5. Go to OAuth2 → URL Generator. Under Scopes, check bot. Under Bot Permissions, check Send Messages, Read Messages/View Channels, Read Message History
 6. Copy the generated URL, paste in a new browser tab, invite the bot to your server
 7. Go back to Bot → Reset Token → copy the token
-8. Add it to your .env file as DISCORD_BOT_TOKEN
+8. Add it to your `.env` file as `DISCORD_BOT_TOKEN`
 
-Step 7: Get a Jupiter API Key
+### Step 7: Get a Jupiter API Key
 
-1. Go to developers.jup.ag
+1. Go to [developers.jup.ag](https://developers.jup.ag)
 2. Sign up and create a new API key
 3. Use it in Step 4 when configuring the Jupiter CLI
 
-Step 8: Start Alfred
+### Step 8: Start Alfred
 
 ```bash
 npm start
 ```
 
-Alfred will appear online in your Discord server's #general channel. Type info to see what he can do.
+Alfred will appear online in your Discord server's `#general` channel. Type `info` to see what he can do.
 
-Step 9: Using a Different AI Model
+### Step 9: Using a Different AI Model
 
-Alfred was built and tested with Qwen 3.5 122B on NVIDIA's API. The system prompt, token limits, and response parsing are calibrated for this model.
+Alfred was built and tested with **Qwen 3.5 122B** on NVIDIA's API. The system prompt, token limits, and response parsing are calibrated for this model.
 
-You can swap to any OpenAI-compatible API provider. In src/discord.js, change these two lines:
+You can swap to any OpenAI-compatible API provider. In `src/discord.js`, change these two lines:
 
 ```javascript
 // NVIDIA Qwen (tested)
@@ -356,86 +358,94 @@ const BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const MODEL = 'gemini-2.0-flash';
 ```
 
-Your API key stays in the .env file. The variable name doesn't matter—it's just a string that gets passed to the provider.
+Your API key stays in the `.env` file. The variable name doesn't matter—it's just a string that gets passed to the provider.
 
-⚠️ What to Expect When Swapping Models
+#### ⚠️ What to Expect When Swapping Models
 
-Issue Likelihood What Happens
-Verbose responses High Brief Alfred becomes chatty Alfred
-Refused commands Medium Safety filters block financial operations
-Broken JSON Medium Commands fail silently
-Different personality Certain Alfred won't sound like Alfred
+| Issue | Likelihood | What Happens |
+|-------|-----------|--------------|
+| Verbose responses | High | Brief Alfred becomes chatty Alfred |
+| Refused commands | Medium | Safety filters block financial operations |
+| Broken JSON | Medium | Commands fail silently |
+| Different personality | Certain | Alfred won't sound like Alfred |
 
 We tested with Qwen. If you swap models, expect to recalibrate the system prompt, token limits, and temperature settings. The architecture is model-agnostic. The personality is not.
 
 ---
 
-Commands
+## Commands
 
 Alfred understands natural language. Here's how you'd actually talk to him.
 
-Checking Your Finances
+### Checking Your Finances
 
-What You Say What Alfred Does
-vault balance Shows your shielded vault balance and any incoming funds waiting on your stealth address
-SOL price Fetches the live SOL/USDC price from Jupiter
-market overview Shows live prices for 9 tokens: SOL, JUP, BONK, JTO, WIF, RNDR, HNT, PYTH, USDC
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `vault balance` | Shows your shielded vault balance and any incoming funds waiting on your stealth address |
+| `SOL price` | Fetches the live SOL/USDC price from Jupiter |
+| `market overview` | Shows live prices for 9 tokens: SOL, JUP, BONK, JTO, WIF, RNDR, HNT, PYTH, USDC |
 
-Receiving Money Privately
+### Receiving Money Privately
 
-What You Say What Alfred Does
-generate address Returns your Umbra stealth address. Give this to anyone who wants to send you money privately.
-scan for payments Checks your Umbra address for incoming funds. If someone sent you USDC, Alfred finds it.
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `generate address` | Returns your Umbra stealth address. Give this to anyone who wants to send you money privately. |
+| `scan for payments` | Checks your Umbra address for incoming funds. If someone sent you USDC, Alfred finds it. |
 
-Managing Your Vault
+### Managing Your Vault
 
-What You Say What Alfred Does
-shield 50 USDC Moves 50 USDC from your stealth address into the shielded vault. The public can no longer see it.
-shield Sweeps ALL available USDC from your stealth address into the vault.
-withdraw 20 USDC Pulls 20 USDC from the vault back to your stealth address.
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `shield 50 USDC` | Moves 50 USDC from your stealth address into the shielded vault. The public can no longer see it. |
+| `shield` | Sweeps ALL available USDC from your stealth address into the vault. |
+| `withdraw 20 USDC` | Pulls 20 USDC from the vault back to your stealth address. |
 
-Sending Money to Anyone
+### Sending Money to Anyone
 
-What You Say What Alfred Does
-send 50 USDC to 7JVdFkPm... Transfers 50 USDC to any Solana address. If the address has never held USDC before, Alfred creates a token account for them first and lets you know.
-send 50 USDC to Daniel Transfers 50 USDC to a contact you've saved. No need to copy-paste addresses again.
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `send 50 USDC to 7JVdFkPm...` | Transfers 50 USDC to any Solana address. If the address has never held USDC before, Alfred creates a token account for them first and lets you know. |
+| `send 50 USDC to Daniel` | Transfers 50 USDC to a contact you've saved. No need to copy-paste addresses again. |
 
-Your Personal Address Book
+### Your Personal Address Book
 
 You don't need to memorize or copy-paste long Solana addresses. Alfred remembers your contacts.
 
-What You Say What Alfred Does
-save 7JVdFkPm... as Daniel Saves that address under the name "Daniel"
-save as Daniel After a transfer, Alfred asks if you want to save the address. Reply with this to save it immediately.
-send 20 USDC to Daniel Looks up "Daniel" in your address book and sends to the saved address
-address book Lists everyone you've saved
-delete Daniel Removes Daniel from your address book
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `save 7JVdFkPm... as Daniel` | Saves that address under the name "Daniel" |
+| `save as Daniel` | After a transfer, Alfred asks if you want to save the address. Reply with this to save it immediately. |
+| `send 20 USDC to Daniel` | Looks up "Daniel" in your address book and sends to the saved address |
+| `address book` | Lists everyone you've saved |
+| `delete Daniel` | Removes Daniel from your address book |
 
-Trading
+### Trading
 
-What You Say What Alfred Does
-vault swap 10 USDC to SOL Withdraws 10 USDC from the vault, gets a live Jupiter quote, shows the expected SOL output, and re-shields everything. On mainnet, the swap executes. On devnet, it's simulated with real pricing.
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `vault swap 10 USDC to SOL` | Withdraws 10 USDC from the vault, gets a live Jupiter quote, shows the expected SOL output, and re-shields everything. On mainnet, the swap executes. On devnet, it's simulated with real pricing. |
 
-Housekeeping
+### Housekeeping
 
-What You Say What Alfred Does
-info Lists all available commands
-nuke Clears all messages in the channel
-
----
-
-Built With
-
-· Solana — Low-latency execution and native SPL token composability
-· Solana Web3.js — Blockchain interaction
-· Discord.js — Conversational interface
-· NVIDIA NIM — AI model (Qwen 3.5 122B) — swappable to any OpenAI-compatible API
-· MagicBlock Private Payments API — Shielded vault via TEE
-· Umbra SDK — Stealth addresses for private receiving
-· Jupiter CLI — Market data and swap simulation
+| What You Say | What Alfred Does |
+|--------------|------------------|
+| `info` | Lists all available commands |
+| `nuke` | Clears all messages in the channel |
 
 ---
 
-Say what you want. It happens—privately.
+## Built With
+
+- **Solana** — Low-latency execution and native SPL token composability
+- **Solana Web3.js** — Blockchain interaction
+- **Discord.js** — Conversational interface
+- **NVIDIA NIM** — AI model (Qwen 3.5 122B) — swappable to any OpenAI-compatible API
+- **MagicBlock Private Payments API** — Shielded vault via TEE
+- **Umbra SDK** — Stealth addresses for private receiving
+- **Jupiter CLI** — Market data and swap simulation
+
+---
+
+**Say what you want. It happens—privately.**
 
 Built on Solana during the Colosseum Frontier Hackathon.
