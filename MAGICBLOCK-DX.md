@@ -74,7 +74,34 @@ The error messages are helpful once you trigger them, but the required fields ar
 
 ---
 
-## 5. What Worked Brilliantly
+## 5. The Withdrawal Simulation Problem (Critical Finding)
+
+This was the most difficult issue we encountered with MagicBlock. It consumed significant debugging time and required an architectural workaround.
+
+### The Problem
+
+When the L1 balance was insufficient for a transfer, we attempted to withdraw from the vault and transfer in a single API call. The `/v1/spl/transfer` endpoint with `fromBalance: 'ephemeral'` was supposed to handle this automatically. It didn't.
+
+The simulation failed with `custom program error: 0x1` every time the L1 balance was zero and the funds needed to come from the vault. The error message was `insufficient funds`, but the vault had sufficient funds. The issue was that the simulation was checking against the base layer state, not the ephemeral rollup state.
+
+### The Workaround
+
+We implemented a dedicated `withdrawFromVault` function that performs the withdrawal as a separate confirmed transaction before the transfer. The flow became:
+
+1. Check L1 balance
+2. If insufficient, withdraw from vault as a standalone transaction
+3. Wait for network confirmation (2-second delay)
+4. Execute the transfer from L1 to recipient
+
+This added latency but made transfers reliable. The two-step flow should be documented as a known pattern for devnet usage.
+
+### Recommendation
+
+Document that `fromBalance: 'ephemeral'` may not work reliably on devnet. Provide the two-step withdrawal-then-transfer pattern as a recommended workaround. Better yet, fix the simulation to properly reference ephemeral state during pre-flight checks.
+
+---
+
+## 6. What Worked Brilliantly
 
 - **Deposit Reliability:** Once configured correctly, deposits executed consistently. Four confirmed on-chain transactions. Zero failures after the initial setup.
 - **Withdrawal Speed:** Withdrawals from the vault to L1 confirmed quickly. The funds were available for transfer within seconds.
@@ -83,17 +110,18 @@ The error messages are helpful once you trigger them, but the required fields ar
 
 ---
 
-## 6. Feature Requests
+## 7. Feature Requests
 
 1. **Document the authorization flow** for `/v1/spl/private-balance` with a code snippet
 2. **Add native SOL support** or clearly document that it's SPL-only
 3. **Include full example payloads** in the API reference for deposit, transfer, and withdrawal
 4. **Add a "Which API?" guide** to the top of the docs to help developers choose between Private Payments and Ephemeral Rollups
 5. **Document the deposit flags** (`initIfMissing`, `initAtasIfMissing`, `idempotent`) in the deposit example
+6. **Document the `fromBalance: 'ephemeral'` limitation** on devnet and provide the two-step withdrawal-then-transfer workaround
 
 ---
 
-## 7. What We Loved
+## 8. What We Loved
 
 The Private Payments API is the right abstraction for what we built. We didn't need to understand Ephemeral Rollups or TEE architecture. We just called REST endpoints with our wallet address and amounts, and MagicBlock handled the rest. The shielded vault is invisible to Solscan. The deposit transactions are confirmed on-chain. The privacy proof is verifiable by anyone who checks the block explorer and sees nothing.
 
