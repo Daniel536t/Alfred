@@ -29,7 +29,6 @@ export async function routeAddressBook(params = {}) {
             const { name, address } = data;
             if (!name || !address) return { success: false, error: 'Name and address required, Sir.' };
             
-            // Strip accidental punctuation from name
             const cleanName = name.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]$/, '').trim().toLowerCase();
             
             if (!isValidAddress(address)) {
@@ -38,7 +37,23 @@ export async function routeAddressBook(params = {}) {
             
             book[cleanName] = address;
             saveBook(book);
-            return { success: true, message: `Saved ${cleanName} (${address.slice(0, 8)}...) to your address book, Sir.` };
+            return { success: true, message: `Saved ${cleanName} to your address book, Sir.` };
+        }
+        case 'delete':
+        case 'remove': {
+            const { name } = data;
+            if (!name) return { success: false, error: 'Which contact shall I delete, Sir?' };
+            
+            const cleanName = name.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]$/, '').trim().toLowerCase();
+            
+            if (!book[cleanName]) {
+                return { success: false, error: `No contact found for "${name}", Sir.` };
+            }
+            
+            const deletedAddress = book[cleanName];
+            delete book[cleanName];
+            saveBook(book);
+            return { success: true, message: `Deleted ${cleanName} from your address book, Sir.` };
         }
         case 'lookup': {
             const { name } = data;

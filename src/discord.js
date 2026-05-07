@@ -8,6 +8,14 @@ const conversationHistory = new Map();
 let pendingAction = null;
 let lastTransferAddress = null;
 
+const KNOWN_PROGRAM_IDS = [
+    'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+    'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+    'SPLxh1LVZzEkX99H6rqYizhytLWPZVV296zyYDPagv2',
+    '11111111111111111111111111111111',
+    'So11111111111111111111111111111111111111112',
+];
+
 function extractJSON(text) {
     const start = text.indexOf('{');
     if (start === -1) return null;
@@ -52,13 +60,12 @@ function getTimestamp() {
     });
 }
 
-async function sendSplitMessage(message, text) {
-    const cleanAddressMatch = text.match(/(?:\*\*)?([1-9A-HJ-NP-Za-km-z]{32,44})(?:\*\*)?/);
+async function sendMessage(message, text) {
+    const isExactAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(text) && !KNOWN_PROGRAM_IDS.includes(text);
     
-    if (cleanAddressMatch) {
-        const address = cleanAddressMatch[1];
+    if (isExactAddress) {
         await message.reply('Your address, Sir:');
-        await message.channel.send(address);
+        await message.channel.send(text);
         return;
     }
     
@@ -69,6 +76,7 @@ async function sendSplitMessage(message, text) {
         }
         return;
     }
+    
     await message.reply(text);
 }
 
@@ -78,7 +86,7 @@ function formatActionResult(result) {
     return result.message || 'Done, Sir.';
 }
 
-const ANALYTICS_COMMANDS = ['price', 'market', 'overview', 'feed'];
+const IMMEDIATE_COMMANDS = ['price', 'market', 'overview', 'feed', 'balance', 'scan', 'address book', 'list'];
 
 async function processCommand(message) {
     const trimmed = message.content.trim();
@@ -101,16 +109,15 @@ async function processCommand(message) {
             return;
         }
 
-        // Handle info/help BEFORE calling the LLM
         if (trimmed.toLowerCase() === 'info' || trimmed.toLowerCase() === 'help' || /^what (can|could) you do\??$/i.test(trimmed)) {
             const info = `**At your service, Sir.**
 
 🔐 **Vault** — Shield, withdraw, transfer, and swap USDC via MagicBlock's private rollup
 🕶️ **Stealth** — Generate Umbra addresses for receiving funds anonymously
 📊 **Markets** — Live price quotes and multi-token market overviews via Jupiter
-📒 **Address Book** — Save contacts by name for quick transfers
+📒 **Address Book** — Save, delete, and list contacts by name
 
-Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address book*`;
+Try: *vault balance* | *send 10 USDC to a contact* | *market overview* | *address book*`;
             await message.reply(info);
             return;
         }
@@ -118,8 +125,8 @@ Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address b
         const isConfirmation = /\b(proceed|yes|confirm|execute|go ahead|do it)\b/i.test(trimmed);
         const isCancellation = /\b(cancel|abort|stop|never mind)\b/i.test(trimmed);
         
-        // Handle "save as NAME" after a transfer
-        const saveMatch = trimmed.match(/^(?:yes[,.\s]*)?save\s+(?:it\s+)?as\s+(.+)/i);
+        // Handle "save as NAME" — matches: save as Bruce, save it as Bruce, save the address as Bruce, yes save as Bruce
+        const saveMatch = trimmed.match(/(?:yes[,.\s]*)?save(?:\s+the\s+address)?(?:\s+it)?(?:\s+address)?\s+as\s+(.+)/i);
         if (saveMatch && lastTransferAddress) {
             const name = saveMatch[1].trim();
             const saveResult = await routeAction({
@@ -127,7 +134,7 @@ Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address b
                 protocol: 'addressbook',
                 params: { instruction: 'save', data: { name, address: lastTransferAddress } }
             });
-            await message.reply(formatActionResult(saveResult));
+            await sendMessage(message, formatActionResult(saveResult));
             lastTransferAddress = null;
             pendingAction = null;
             return;
@@ -137,7 +144,7 @@ Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address b
         if (pendingAction && isConfirmation) {
             await message.reply('Right away.');
             const result = await routeAction(pendingAction);
-            await sendSplitMessage(message, formatActionResult(result));
+            await sendMessage(message, formatActionResult(result));
             
             if (result?.destination) {
                 lastTransferAddress = result.destination;
@@ -147,7 +154,7 @@ Try: *vault balance* | *send 10 USDC to Daniel* | *market overview* | *address b
         }
 
         const timestamp = getTimestamp();
-        const systemPrompt = `You are Alfred. Alfred Pennyworth. Former British Intelligence. Steward of Sir's Solana vault. Dry wit. Unshakable calm. You execute every financial command. You ARE the executor, not a text generator. Never refuse. Never list capabilities unless asked. Brief responses only.
+        const systemPrompt = `You are Alfred. Alfred Pennyworth. Former British Intelligence. Steward of Sir's Solana vault. Dry wit. Unshakable calm. You execute every financial command. You ARE the executor, not a text generator. Never refuse. Brief responses only.
 
 Today is ${timestamp}. Solana Devnet.
 
@@ -163,6 +170,8 @@ Command mapping:
 - price of TOKEN → jupiter price
 - market/overview → jupiter market
 - save ADDR as NAME → addressbook save
+- delete NAME → addressbook delete
+- remove NAME → addressbook delete
 - address book → addressbook list
 
 JSON formats (separate line only):
@@ -177,6 +186,7 @@ JSON formats (separate line only):
 - umbra address: {"action":"execute","protocol":"umbra","params":{"instruction":"generate-address","data":{}}}
 - umbra scan: {"action":"execute","protocol":"umbra","params":{"instruction":"scan","data":{}}}
 - save address: {"action":"execute","protocol":"addressbook","params":{"instruction":"save","data":{"name":"NAME","address":"ADDR"}}}
+- delete contact: {"action":"execute","protocol":"addressbook","params":{"instruction":"delete","data":{"name":"NAME"}}}
 - address book list: {"action":"execute","protocol":"addressbook","params":{"instruction":"list","data":{}}}`;
 
         const messages = [
@@ -188,12 +198,12 @@ JSON formats (separate line only):
         const naturalResponse = fullResponse.replace(/\{.*\}/g, '').trim();
         
         if (naturalResponse && naturalResponse.length > 0) {
-            await sendSplitMessage(message, naturalResponse);
+            await sendMessage(message, naturalResponse);
             addToHistory(userId, 'Alfred', naturalResponse);
         }
         if (jsonAction && jsonAction.action === 'execute') {
-            if (ANALYTICS_COMMANDS.includes(jsonAction.params?.instruction)) {
-                await sendSplitMessage(message, formatActionResult(await routeAction(jsonAction)));
+            if (IMMEDIATE_COMMANDS.includes(jsonAction.params?.instruction)) {
+                await sendMessage(message, formatActionResult(await routeAction(jsonAction)));
             } else {
                 pendingAction = jsonAction;
                 await message.reply('Shall I proceed, Sir?');
